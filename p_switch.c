@@ -55,11 +55,21 @@ button_t  _g_buttonlist[MAXBUTTONS];
 
 // switch animation structure type
 
+#if __VBCC__
+#pragma pack(1)
+typedef struct
+{
+  char name1[9];
+  char name2[9];
+} switchlist_t; //jff 3/23/98 pack to read from memory
+#pragma pack()
+#else
 typedef PACKEDATTR_PRE struct
 {
   char name1[9];
   char name2[9];
 } PACKEDATTR_POST switchlist_t; //jff 3/23/98 pack to read from memory
+#endif
 
 typedef char assertSwitchlistSize[sizeof(switchlist_t) == 18 ? 1 : -1];
 

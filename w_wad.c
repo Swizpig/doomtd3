@@ -88,7 +88,11 @@ static void __far*__far* lumpcache;
 static void _ffread(void __far* ptr, uint16_t size, FILE* fp)
 {
 	uint8_t __far* dest = ptr;
+#if defined __VBCC__
+	uint8_t* buffer = malloc(BUFFERSIZE);
+#else
 	uint8_t* buffer = alloca(BUFFERSIZE);
+#endif
 
 	while (size >= BUFFERSIZE)
 	{
@@ -103,6 +107,10 @@ static void _ffread(void __far* ptr, uint16_t size, FILE* fp)
 		fread(buffer, size, 1, fp);
 		_fmemcpy(dest, buffer, size);
 	}
+	
+#if defined __VBCC__
+	free(buffer);
+#endif
 }
 
 typedef struct

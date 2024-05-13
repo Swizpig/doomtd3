@@ -23,6 +23,10 @@
  *
  *-----------------------------------------------------------------------------*/
 
+#if defined __VBCC__
+#include <graphics/gfxbase.h>
+#endif
+
 #include <clib/exec_protos.h>
 #include <clib/intuition_protos.h>
 #include <clib/graphics_protos.h>
@@ -52,6 +56,21 @@
 
 #define PLANEWIDTH			 		(HORIZONTAL_RESOLUTION/8)
 
+
+#if defined __VBCC__
+
+#if HORIZONTAL_RESOLUTION == HORIZONTAL_RESOLUTION_LO
+#define DDFSTRT_VALUE	0x0038
+#define DDFSTOP_VALUE	0x00d0
+#define BPLCON0_VALUE	0x1000
+#else
+#define DDFSTRT_VALUE	0x003c
+#define DDFSTOP_VALUE	0x00d4
+#define BPLCON0_VALUE	0x9000
+#endif
+
+#else
+	
 #if HORIZONTAL_RESOLUTION == HORIZONTAL_RESOLUTION_LO
 #define DDFSTRT_VALUE	0x0038
 #define DDFSTOP_VALUE	0x00d0
@@ -60,6 +79,8 @@
 #define DDFSTRT_VALUE	0x003c
 #define DDFSTOP_VALUE	0x00d4
 #define BPLCON0_VALUE	0b1001000000000000
+#endif
+
 #endif
 
 #define DW	(HORIZONTAL_RESOLUTION/HORIZONTAL_RESOLUTION_LO)
@@ -111,6 +132,86 @@ static boolean isGraphicsModeSet = false;
 #define COPLIST_IDX_COLOR00_VALUE 15
 #define COPLIST_IDX_BPL1PTH_VALUE 19
 #define COPLIST_IDX_BPL1PTL_VALUE 21
+
+#define USE_SHADING 0
+
+#if USE_SHADING
+
+#define C0 0
+#define C1 1
+#define C2 0x44
+#define C3 0x25
+#define C4 0xAA
+#define C5 0xDA
+#define C6 0xBB
+#define C7 0xFE
+#define C8 0xFF
+static const uint8_t COL_REMAP[2][256] =
+{
+	{C0,C0,C0,C2,C8,C0,C0,C0,C0,C1,C1,C0,C0,C2,C1,C1,
+	C7,C6,C6,C6,C5,C5,C5,C5,C4,C4,C4,C4,C3,C3,C3,C3,
+	C2,C2,C2,C2,C2,C2,C1,C1,C1,C1,C1,C1,C1,C0,C0,C0,
+	C8,C8,C8,C7,C7,C7,C7,C7,C6,C6,C6,C6,C5,C5,C5,C5,
+	C4,C4,C4,C4,C3,C3,C3,C3,C3,C2,C2,C2,C2,C1,C1,C1,
+	C8,C8,C7,C7,C7,C7,C7,C6,C6,C6,C6,C5,C5,C5,C5,C4,
+	C4,C4,C4,C3,C3,C3,C3,C3,C2,C2,C2,C2,C1,C1,C1,C1,
+	C6,C6,C6,C5,C5,C4,C4,C3,C3,C3,C2,C2,C1,C1,C0,C0,
+	C6,C5,C5,C5,C4,C4,C4,C4,C3,C3,C3,C3,C3,C2,C2,C2,
+	C4,C4,C3,C3,C3,C2,C2,C1,C4,C3,C3,C3,C2,C2,C2,C2,
+	C8,C7,C6,C5,C4,C3,C2,C2,C8,C8,C7,C6,C5,C5,C4,C3,
+	C2,C2,C2,C2,C2,C2,C1,C1,C1,C1,C1,C1,C1,C0,C0,C0,
+	C8,C7,C6,C5,C4,C3,C2,C1,C1,C0,C0,C0,C0,C0,C0,C0,
+	C8,C8,C7,C7,C6,C6,C5,C5,C5,C4,C4,C4,C3,C3,C3,C3,
+	C8,C8,C8,C8,C8,C8,C8,C7,C3,C2,C2,C2,C2,C1,C1,C1,
+	C0,C0,C0,C0,C0,C0,C0,C0,C6,C7,C6,C3,C3,C2,C1,C4},
+#undef C0
+#undef C1
+#undef C2
+#undef C3
+#undef C4
+#undef C5
+#undef C6
+#undef C7
+#undef C8
+
+#define C0 0
+#define C1 0x10
+#define C2 0x11
+#define C3 0x52
+#define C4 0x55
+#define C5 0xAD
+#define C6 0x77
+#define C7 0xEF
+#define C8 0xFF
+	{C0,C0,C0,C2,C8,C0,C0,C0,C0,C1,C1,C0,C0,C2,C1,C1,
+	C7,C6,C6,C6,C5,C5,C5,C5,C4,C4,C4,C4,C3,C3,C3,C3,
+	C2,C2,C2,C2,C2,C2,C1,C1,C1,C1,C1,C1,C1,C0,C0,C0,
+	C8,C8,C8,C7,C7,C7,C7,C7,C6,C6,C6,C6,C5,C5,C5,C5,
+	C4,C4,C4,C4,C3,C3,C3,C3,C3,C2,C2,C2,C2,C1,C1,C1,
+	C8,C8,C7,C7,C7,C7,C7,C6,C6,C6,C6,C5,C5,C5,C5,C4,
+	C4,C4,C4,C3,C3,C3,C3,C3,C2,C2,C2,C2,C1,C1,C1,C1,
+	C6,C6,C6,C5,C5,C4,C4,C3,C3,C3,C2,C2,C1,C1,C0,C0,
+	C6,C5,C5,C5,C4,C4,C4,C4,C3,C3,C3,C3,C3,C2,C2,C2,
+	C4,C4,C3,C3,C3,C2,C2,C1,C4,C3,C3,C3,C2,C2,C2,C2,
+	C8,C7,C6,C5,C4,C3,C2,C2,C8,C8,C7,C6,C5,C5,C4,C3,
+	C2,C2,C2,C2,C2,C2,C1,C1,C1,C1,C1,C1,C1,C0,C0,C0,
+	C8,C7,C6,C5,C4,C3,C2,C1,C1,C0,C0,C0,C0,C0,C0,C0,
+	C8,C8,C7,C7,C6,C6,C5,C5,C5,C4,C4,C4,C3,C3,C3,C3,
+	C8,C8,C8,C8,C8,C8,C8,C7,C3,C2,C2,C2,C2,C1,C1,C1,
+	C0,C0,C0,C0,C0,C0,C0,C0,C6,C7,C6,C3,C3,C2,C1,C4}
+};
+
+#undef C0
+#undef C1
+#undef C2
+#undef C3
+#undef C4
+#undef C5
+#undef C6
+#undef C7
+#undef C8
+
+#endif
 
 
 static uint16_t __chip coplist[] = {
@@ -188,7 +289,12 @@ void I_InitGraphics(void)
 
 	OwnBlitter();
 	WaitBlit();
+
+#if defined __VBCC__
+	custom.bltcon0 = 0x09F0;
+#else
 	custom.bltcon0 = 0b0000100111110000;
+#endif
 	custom.bltcon1 = 0;
 
 	custom.bltamod = PLANEWIDTH - SCREENWIDTH * DW / 8;
@@ -472,6 +578,13 @@ void R_DrawColumn(const draw_column_vars_t *dcvars)
 		case  1: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c;
 	}
 #else
+
+#if USE_SHADING
+	for (l=0; l<count; l++)
+	{
+		*dest = COL_REMAP[(dcvars->yl+l)&1][nearcolormap[source[frac>>COLBITS]]]; dest += PLANEWIDTH; frac += fracstep;
+	}
+#else
 	while (l--)
 	{
 		*dest = nearcolormap[source[frac>>COLBITS]]; dest += PLANEWIDTH; frac += fracstep;
@@ -513,6 +626,8 @@ void R_DrawColumn(const draw_column_vars_t *dcvars)
 		case  2: *dest = nearcolormap[source[frac>>COLBITS]]; dest += PLANEWIDTH; frac += fracstep;
 		case  1: *dest = nearcolormap[source[frac>>COLBITS]];
 	}
+#endif
+
 #endif
 }
 
@@ -586,7 +701,12 @@ void R_DrawFuzzColumn(const draw_column_vars_t *dcvars)
 #if defined VERTICAL_RESOLUTION_DOUBLED
 		*dest = *(dest + PLANEWIDTH) = nearcolormap[dest[fuzzoffset[fuzzpos] * DH]];
 #else
+
+#if USE_SHADING
+		*dest = COL_REMAP[(fuzzpos+dcvars->yl)&1][nearcolormap[dest[fuzzoffset[fuzzpos] * DH]]];
+#else
 		*dest = nearcolormap[dest[fuzzoffset[fuzzpos] * DH]];
+#endif
 #endif
 		dest += PLANEWIDTH * DH;
 
@@ -676,7 +796,7 @@ segment_t I_ZoneBase(uint32_t *size)
 	}
 
 	*size = paragraphs * PARAGRAPH_SIZE;
-	printf("%ld bytes allocated for zone\n", *size);
+	printf("%lu bytes allocated for zone\n", *size);
 	return D_FP_SEG(ptr);
 }
 
@@ -690,7 +810,40 @@ segment_t I_ZoneAdditional(uint32_t *size)
 
 static clock_t starttime;
 
+#if __VBCC__
 
+/* 
+
+Ugh - "The clock() function always returns -1. This is correct, according to the C
+standard, because on AmigaOS it is not possible to obtain the time used by the
+calling process"
+
+This, I suspect, was causing div-by-zero in the FPS calcs
+
+*/
+
+void I_StartClock(void)
+{
+	uint32_t seconds;
+	uint32_t micros;
+
+	CurrentTime(&seconds, &micros);
+	starttime = (clock_t)seconds;
+}
+
+
+uint32_t I_EndClock(void)
+{
+	uint32_t seconds;
+	uint32_t micros;
+
+	CurrentTime(&seconds, &micros);
+	clock_t endtime = (clock_t)seconds;
+
+	return (endtime - starttime) * TICRATE;
+}
+
+#else
 void I_StartClock(void)
 {
 	starttime = clock();
@@ -700,12 +853,15 @@ void I_StartClock(void)
 uint32_t I_EndClock(void)
 {
 	clock_t endtime = clock();
+
 	return ((endtime - starttime) * TICRATE) / CLOCKS_PER_SEC;
 }
 
+#endif
 
 void I_Error2(const char *error, ...)
 {
+	I_UploadNewPalette(1);
 	va_list argptr;
 
 	I_ShutdownGraphics();

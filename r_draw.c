@@ -480,7 +480,7 @@ static const angle16_t xtoviewangleTable[VIEWWINDOWWIDTH + 1] =
 static const angle16_t clipangle = 0x2008; // = xtoviewangleTable[0]
 
 
-#if defined __WATCOMC__
+#if (defined __WATCOMC__) || (defined __VBCC__)
 //
 #else
 inline
@@ -526,7 +526,7 @@ inline static fixed_t CONSTFUNC FixedMul3232(fixed_t a, fixed_t b)
 // FixedMulAngle
 // b should be coming from finesine() or finecosine(), so it's high word is either 0x0000 or 0xffff
 //
-#if defined __WATCOMC__
+#if (defined __WATCOMC__) || (defined __VBCC__)
 //
 #else
 inline
@@ -548,7 +548,7 @@ fixed_t CONSTFUNC FixedMulAngle(fixed_t a, fixed_t b)
 }
 
 
-#if defined __WATCOMC__
+#if (defined __WATCOMC__) || (defined __VBCC__)
 //
 #else
 inline
@@ -579,7 +579,7 @@ uint16_t CONSTFUNC FixedReciprocalBig(fixed_t v);
 
 
 //Approx fixed point divide of a/b using reciprocal. -> a * (1/b).
-#if defined __WATCOMC__
+#if (defined __WATCOMC__) || (defined __VBCC__)
 //
 #else
 inline
@@ -593,7 +593,7 @@ fixed_t CONSTFUNC FixedApproxDiv(fixed_t a, fixed_t b)
 }
 
 
-#if defined __WATCOMC__
+#if (defined __WATCOMC__) || (defined __VBCC__)
 //
 #else
 inline

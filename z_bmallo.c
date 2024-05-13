@@ -52,13 +52,13 @@ typedef struct bmalpool_s {
 } bmalpool_t;
 
 
-__inline static void __far* getelem(bmalpool_t __far* p, size_t size, size_t n)
+inline static void __far* getelem(bmalpool_t __far* p, size_t size, size_t n)
 {
 	return (((byte __far*)p) + sizeof(bmalpool_t) + sizeof(byte) * (p->blocks) + size * n);
 }
 
 
-__inline static PUREFUNC uint32_t linearAddress(const void __far* ptr)
+inline static PUREFUNC uint32_t linearAddress(const void __far* ptr)
 {
 	uint32_t seg = D_FP_SEG(ptr);
 	uint16_t off = D_FP_OFF(ptr);
@@ -66,7 +66,7 @@ __inline static PUREFUNC uint32_t linearAddress(const void __far* ptr)
 }
 
 
-__inline static PUREFUNC int16_t iselem(const bmalpool_t __far* pool, size_t size, const void __far* p)
+inline static PUREFUNC int16_t iselem(const bmalpool_t __far* pool, size_t size, const void __far* p)
 {
 	int16_t dif = linearAddress(p) - linearAddress(pool);
 

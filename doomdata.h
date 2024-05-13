@@ -99,6 +99,17 @@
 
 // Thing definition, position, orientation and type,
 // plus skill/visibility flags and attributes.
+#if defined __VBCC__
+#pragma pack(1)
+typedef struct {
+  int16_t x;
+  int16_t y;
+  int16_t angle;
+  int16_t type;
+  int16_t options;
+} mapthing_t;
+#pragma pack()
+#else
 typedef PACKEDATTR_PRE struct {
   int16_t x;
   int16_t y;
@@ -106,6 +117,7 @@ typedef PACKEDATTR_PRE struct {
   int16_t type;
   int16_t options;
 } PACKEDATTR_POST mapthing_t;
+#endif
 
 typedef char assertMapthingSize[sizeof(mapthing_t) == 10 ? 1 : -1];
 

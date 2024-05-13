@@ -140,6 +140,9 @@
 #if defined __WATCOMC__
 	#define PACKEDATTR_PRE	_Packed
 	#define PACKEDATTR_POST
+#elif defined __VBCC__
+	#define PACKEDATTR_PRE #error "ADD PACK PRAGMAS"
+	#define PACKEDATTR_POST #error "ADD PACK PRAGMAS"
 #else
 	#define PACKEDATTR_PRE
 	#define PACKEDATTR_POST __attribute__((packed))
@@ -149,9 +152,20 @@
 #if defined __WATCOMC__
 	#define NORETURN_PRE  __declspec(noreturn)
 	#define NORETURN_POST
+#elif defined __VBCC__
+	#define NORETURN_PRE __noreturn
+	#define NORETURN_POST
 #else
 	#define NORETURN_PRE
 	#define NORETURN_POST __attribute__((__noreturn__))
+#endif
+
+
+#if defined __VBCC__
+#define LITTLE_ENDIAN 0 
+#define BIG_ENDIAN 1
+#define BYTE_ORDER BIG_ENDIAN
+
 #endif
 
 
@@ -196,6 +210,7 @@
    calls it, or to nothing if 'inline' is not supported under any name.  */
 #if defined __WATCOMC__
 	#define inline __inline
+#elif defined __VBCC__
 #else
 	#define inline __inline__
 #endif

@@ -64,7 +64,18 @@
 // into the rectangular texture space using origin
 // and possibly other attributes.
 //
-
+#if defined __VBCC__
+#pragma pack(1)
+typedef struct
+{
+  int16_t originx;
+  int16_t originy;
+  int16_t patch;
+  int16_t stepdir;         // unused in Doom but might be used in Phase 2 Boom
+  int16_t colormap;        // unused in Doom but might be used in Phase 2 Boom
+} mappatch_t;
+#pragma pack()
+#else
 typedef PACKEDATTR_PRE struct
 {
   int16_t originx;
@@ -73,10 +84,24 @@ typedef PACKEDATTR_PRE struct
   int16_t stepdir;         // unused in Doom but might be used in Phase 2 Boom
   int16_t colormap;        // unused in Doom but might be used in Phase 2 Boom
 } PACKEDATTR_POST mappatch_t;
+#endif
 
 typedef char assertMappatchSize[sizeof(mappatch_t) == 10 ? 1 : -1];
 
-
+#if defined __VBCC__
+#pragma pack(1)
+typedef struct
+{
+  char       name[8];
+  char       pad2[4];      // unused
+  int16_t      width;
+  int16_t      height;
+  char       pad[4];       // unused in Doom but might be used in Boom Phase 2
+  int16_t      patchcount;
+  mappatch_t patches[1];
+} maptexture_t;
+#pragma pack()
+#else
 typedef PACKEDATTR_PRE struct
 {
   char       name[8];
@@ -87,6 +112,7 @@ typedef PACKEDATTR_PRE struct
   int16_t      patchcount;
   mappatch_t patches[1];
 } PACKEDATTR_POST maptexture_t;
+#endif
 
 typedef char assertMaptextureSize[sizeof(maptexture_t) == 32 ? 1 : -1];
 
