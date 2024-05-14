@@ -62,7 +62,7 @@
 #if HORIZONTAL_RESOLUTION == HORIZONTAL_RESOLUTION_LO
 #define DDFSTRT_VALUE	0x0038
 #define DDFSTOP_VALUE	0x00d0
-#define BPLCON0_VALUE	0x1000
+#define BPLCON0_VALUE	0x0000
 #else
 #define DDFSTRT_VALUE	0x003c
 #define DDFSTOP_VALUE	0x00d4
@@ -233,13 +233,14 @@ static uint16_t __chip amiga_palette[] = {
 
 static void I_UploadNewPalette(int8_t pal)
 {
-	coplist[COPLIST_IDX_COLOR00_VALUE] = colors[pal];
+	coplist_a[COPLIST_IDX_COLOR00_VALUE] = coplist_b[COPLIST_IDX_COLOR00_VALUE] = colors[pal];
 }
 
 
 void I_InitGraphics(void)
 {
 	LoadView(NULL);
+	custom.dmacon = 0x0020;
 	WaitTOF();
 	WaitTOF();
 
