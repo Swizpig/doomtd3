@@ -85,11 +85,8 @@
 
 #define DW	(HORIZONTAL_RESOLUTION/HORIZONTAL_RESOLUTION_LO)
 
-#if defined VERTICAL_RESOLUTION_DOUBLED
-#define DH	2
-#else
 #define DH	1
-#endif
+
 
 extern struct GfxBase *GfxBase;
 extern struct Custom custom;
@@ -141,7 +138,7 @@ static boolean isGraphicsModeSet = false;
 #define SIZEOF_COPLIST_POSTSCRIPT (2*2)
 
 static uint16_t __chip coplist_preamble[] = {
-	FMODE,   0,
+	FMODE,  0xf,
 	DDFSTRT, DDFSTRT_VALUE,
 	DDFSTOP, DDFSTOP_VALUE,
 	DIWSTRT, DIWSTRT_VALUE,
@@ -234,6 +231,12 @@ static uint16_t __chip amiga_palette[] = {
 static void I_UploadNewPalette(int8_t pal)
 {
 	coplist_a[COPLIST_IDX_COLOR00_VALUE] = coplist_b[COPLIST_IDX_COLOR00_VALUE] = colors[pal];
+
+	for (int y=0; y<VIEWWINDOWHEIGHT; y++)
+	{
+		coplist_a[SIZEOF_COPLIST_PREAMBLE + COL_STRIDE*y + COL_STRIDE - 1] = 
+		coplist_b[SIZEOF_COPLIST_PREAMBLE + COL_STRIDE*y + COL_STRIDE - 1] = colors[pal];
+	}
 }
 
 
@@ -269,6 +272,7 @@ void I_InitGraphics(void)
 		screenHeightAmiga = 200;
 	}
 
+	// TODO : could this allocate in fast? It's ultimately a malloc
 	uint8_t *screenpage0 = Z_MallocStatic(PLANEWIDTH * screenHeightAmiga * 2);	
 	memset(screenpage0, 0, PLANEWIDTH * screenHeightAmiga * 2);
 
@@ -513,6 +517,7 @@ void I_FinishUpdate(void)
 	screenpage = (uint8_t*)(screenpaget - (uint32_t)screenpage);
 	_s_viewwindow = screenpage + viewwindowtop;
 
+	// TODO: Is this safe? Do I need to wait before switching coplists?
 	custom.cop1lc = (uint32_t)coplist;
 	if (coplist == coplist_a)
 	{
@@ -554,59 +559,12 @@ void R_DrawColumn(const draw_column_vars_t *dcvars)
 
 	int16_t l = count >> 4;
 
-#if defined VERTICAL_RESOLUTION_DOUBLED
-	uint8_t c;
-	while (l--)
-	{
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-	}
-
-	switch (count & 15)
-	{
-		case 15: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case 14: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case 13: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case 12: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case 11: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case 10: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case  9: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case  8: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case  7: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case  6: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case  5: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case  4: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case  3: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case  2: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c; dest += PLANEWIDTH * 2; frac += fracstep;
-		case  1: c = nearcolormap[source[frac>>COLBITS]]; *dest = *(dest + PLANEWIDTH) = c;
-	}
-#else
-
 	// let the compiler to the unrolling
 	uint16_t* dest = coplist + COL_START + 2*dcvars->x + dcvars->yl * COL_STRIDE;
 	for (l=0; l<count; l++)
 	{
 		*dest = amiga_palette[source[frac>>COLBITS]]; dest += COL_STRIDE; frac += fracstep;
 	}
-
-#endif
 }
 
 
@@ -614,23 +572,22 @@ void R_DrawColumnFlat(int16_t texture, const draw_column_vars_t *dcvars)
 {
 	int16_t count = (dcvars->yh - dcvars->yl) + 1;
 
+	if (count <= 0)
+	return;
+
 	//uint8_t *dest = _s_viewwindow + (dcvars->yl * PLANEWIDTH * DH) + dcvars->x;
 
 	uint16_t* dest = coplist + COL_START + 2*dcvars->x + COL_STRIDE*dcvars->yl;
 
 	while (count--)
 	{
-#if defined VERTICAL_RESOLUTION_DOUBLED
-		*dest = *(dest + PLANEWIDTH) = color;
-#else
 		*dest = amiga_palette[texture&0xFF];
-#endif
 		dest += COL_STRIDE;
 	}
 }
 
 
-#define FUZZOFF (PLANEWIDTH)
+#define FUZZOFF (COL_STRIDE)
 #define FUZZTABLE 50
 
 static const int8_t fuzzoffset[FUZZTABLE] =
@@ -647,6 +604,7 @@ static const int8_t fuzzoffset[FUZZTABLE] =
 
 void R_DrawFuzzColumn(const draw_column_vars_t *dcvars)
 {
+	
 	int16_t dc_yl = dcvars->yl;
 	int16_t dc_yh = dcvars->yh;
 
@@ -666,18 +624,17 @@ void R_DrawFuzzColumn(const draw_column_vars_t *dcvars)
 
 	const uint8_t *nearcolormap = &fullcolormap[6 * 256];
 
-	uint8_t *dest = _s_viewwindow + (dc_yl * PLANEWIDTH * DH) + dcvars->x;
+	//uint8_t *dest = _s_viewwindow + (dc_yl * PLANEWIDTH * DH) + dcvars->x;
+
+	uint16_t* dest = coplist + COL_START + 2*dcvars->x + COL_STRIDE*dc_yl;
+
 
 	static int16_t fuzzpos = 0;
 
 	do
 	{
-#if defined VERTICAL_RESOLUTION_DOUBLED
-		*dest = *(dest + PLANEWIDTH) = nearcolormap[dest[fuzzoffset[fuzzpos] * DH]];
-#else
-		*dest = nearcolormap[dest[fuzzoffset[fuzzpos] * DH]];
-#endif
-		dest += PLANEWIDTH * DH;
+		*dest = dest[fuzzoffset[fuzzpos]];
+		dest += COL_STRIDE;
 
 		fuzzpos++;
 		if (fuzzpos >= FUZZTABLE)
