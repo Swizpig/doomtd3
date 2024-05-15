@@ -25,19 +25,18 @@ Implement `i_system.h`. Look at `i_ibm.c` and `i_mac.c` for examples.
 
 [^1]: Two compilers can build the IBM PC 16-bit port. Gcc-ia16 produces faster code than Watcom. The static code analysers of both compilers detect different issues.
 
-
-##Chunky Copper for Amiga
+## Chunky Copper for Amiga
 
 I've forked this (and added VBCC compiler support) to experiment with chunky copper methods. Currently I've added a very dumb "Zero bitplanes, hammer colour 0 as fast as the copper will allow" method, leading to 8x1 pixels. This would work with all of OCS/ECS/AGA, but I've been unable to get VBCC to produce a working 68000 executable (in fact, the compiler flat-out aborts for a 000 compile at higher optimization settings. 020 seems to work fine though.)
 
 Stock A1200 in Winuae gets about 8-9 FPS. 
 
 TODO:
-Re-add status panel
-Add 8 by Y max performance mode (need to read up on copper skips and loops)
-Add 4 by 4 mode
+- Re-add status panel
+- Add 8 by Y max performance mode (need to read up on copper skips and loops)
+- Add 4 by 4 mode
 
 ![thicc pixels](readme_imgs/chunky0.png?raw=true)
 
 
-- Swiz
+Swiz
