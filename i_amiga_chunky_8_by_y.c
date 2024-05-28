@@ -85,7 +85,8 @@
 
 #define DW	(HORIZONTAL_RESOLUTION/HORIZONTAL_RESOLUTION_LO)
 
-#define DH	1
+#define DH	2
+
 
 
 extern struct GfxBase *GfxBase;
@@ -94,9 +95,7 @@ extern struct Custom custom;
 extern const int16_t CENTERY;
 
 static uint16_t viewwindowtop;
-static uint16_t statusbartop;
 static uint8_t *_s_viewwindow;
-static uint8_t *_s_statusbar;
 
 static uint32_t screenpaget;
 static uint8_t *screenpage;
@@ -131,14 +130,24 @@ static boolean isGraphicsModeSet = false;
 #define COPLIST_IDX_BPL1PTH_VALUE 19
 #define COPLIST_IDX_BPL1PTL_VALUE 21
 
-#define COL_START 25
-#define COL_STRIDE (32*2)
-
 #define SIZEOF_COPLIST_PREAMBLE (11*2)
 #define SIZEOF_COPLIST_POSTSCRIPT (2*2)
+#define COL_START (SIZEOF_COPLIST_PREAMBLE+5)
+#define COL_STRIDE (33*2)
+
+
+#define X_START (0x29)
+#define Y_START (0x58)
+
+#define WOBBLE 0
+
+#define COP_WAIT_POS(x,y) ((((y)<<8) | ((x)<<1)) | 1)
+#define COP_WAIT_MASK(x,y) ((((y)<<8) | ((x)<<1)) | 0x8000)
+
+#define COP_WAIT(x,y,xm,ym) COP_WAIT_POS(x,y) , COP_WAIT_MASK(xm, ym)
 
 static uint16_t __chip coplist_preamble[] = {
-	FMODE,  0xf,
+	FMODE,  0xF,
 	DDFSTRT, DDFSTRT_VALUE,
 	DDFSTOP, DDFSTOP_VALUE,
 	DIWSTRT, DIWSTRT_VALUE,
@@ -159,7 +168,8 @@ static uint16_t __chip coplist_postscript[] = {
 };
 
 static uint16_t __chip coplist_row[] = {	
-	0x5C53,0xFFFE, // wait to row start
+	COP_WAIT(0, Y_START, 0, 0x7f),
+	COP_WAIT(X_START, 0, 0x7F, 0), 
 	COLOR00, 0x00F,
 	COLOR00, 0x0F0,
 	COLOR00, 0x00F,
@@ -226,7 +236,6 @@ static uint16_t amiga_palette[] = {
 0x005,0x004,0x003,0x002,0x002,0x001,0x000,0x000,0xf94,0xfe4,0xf7f,0xf0f,0xc0c,0x909,0x606,0xa66
 };
 
-
 static void I_UploadNewPalette(int8_t pal)
 {
 	coplist_a[COPLIST_IDX_COLOR00_VALUE] = coplist_b[COPLIST_IDX_COLOR00_VALUE] = colors[pal];
@@ -256,9 +265,25 @@ void I_InitGraphics(void)
 	{
 		memcpy(coplist_a + SIZEOF_COPLIST_PREAMBLE + y*COL_STRIDE, coplist_row, sizeof(coplist_row));
 		memcpy(coplist_b + SIZEOF_COPLIST_PREAMBLE + y*COL_STRIDE, coplist_row, sizeof(coplist_row));
+		
 		// add wait til row start
-		coplist_a[SIZEOF_COPLIST_PREAMBLE + y*COL_STRIDE] = 0x5c53 + (y<<8);
-		coplist_b[SIZEOF_COPLIST_PREAMBLE + y*COL_STRIDE] = 0x5c53 + (y<<8);
+
+		if ((Y_START+y*DH)>=128)
+		{
+			coplist_a[SIZEOF_COPLIST_PREAMBLE + y*COL_STRIDE + 2] = COP_WAIT_POS(X_START,128);
+			coplist_b[SIZEOF_COPLIST_PREAMBLE + y*COL_STRIDE + 2] = COP_WAIT_POS(X_START,128);
+		}
+		
+		coplist_a[SIZEOF_COPLIST_PREAMBLE + y*COL_STRIDE] = COP_WAIT_POS(0, Y_START + y*DH);
+		coplist_b[SIZEOF_COPLIST_PREAMBLE + y*COL_STRIDE] = COP_WAIT_POS(0, Y_START + y*DH);
+
+#if WOBBLE
+		if (y&1)
+		{
+			coplist_a[SIZEOF_COPLIST_PREAMBLE + y*COL_STRIDE + 2] = COP_WAIT_POS(X_START - 1, ((Y_START+y*DH)>=128)?128:0);
+			coplist_b[SIZEOF_COPLIST_PREAMBLE + y*COL_STRIDE + 2] = COP_WAIT_POS(X_START - 1, ((Y_START+y*DH)>=128)?128:0);
+		}
+#endif
 	}
 	memcpy(coplist_a + SIZEOF_COPLIST_PREAMBLE + VIEWWINDOWHEIGHT*COL_STRIDE, coplist_postscript, sizeof(coplist_postscript));
 	memcpy(coplist_b + SIZEOF_COPLIST_PREAMBLE + VIEWWINDOWHEIGHT*COL_STRIDE, coplist_postscript, sizeof(coplist_postscript));
@@ -294,10 +319,7 @@ void I_InitGraphics(void)
 	custom.cop1lc = (uint32_t) coplist_b;
 
 	viewwindowtop = ((PLANEWIDTH - VIEWWINDOWWIDTH)      / 2) + ((screenHeightAmiga - (VIEWWINDOWHEIGHT * DH + ST_HEIGHT)) / 2) * PLANEWIDTH;
-	statusbartop  = ((PLANEWIDTH - SCREENWIDTH * DW / 8) / 2) + ((screenHeightAmiga - (VIEWWINDOWHEIGHT * DH + ST_HEIGHT)) / 2) * PLANEWIDTH + VIEWWINDOWHEIGHT * DH * PLANEWIDTH;
 	_s_viewwindow = screenpage + viewwindowtop;
-
-	_s_statusbar  = Z_MallocStatic(SCREENWIDTH * ST_HEIGHT);
 
 	OwnBlitter();
 	WaitBlit();
@@ -345,97 +367,6 @@ void I_SetPalette(int8_t pal)
 }
 
 
-
-#if HORIZONTAL_RESOLUTION == HORIZONTAL_RESOLUTION_LO
-
-#define B0 0
-#define B1 1
-
-static const uint8_t VGA_TO_BW_LUT[256] =
-{
-	B0, B0, B0, B1, B1, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1,
-	B1, B1, B1, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0, B0,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B0,
-	B1, B1, B1, B1, B1, B1, B0, B0, B1, B1, B1, B1, B1, B1, B0, B0,
-	B1, B1, B1, B1, B1, B1, B1, B0, B1, B1, B1, B1, B1, B1, B1, B1,
-	B1, B1, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B1, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0,
-	B0, B0, B0, B0, B0, B0, B0, B0, B1, B1, B1, B1, B1, B0, B0, B1
-};
-
-#undef B0
-#undef B1
-#undef B2
-
-#else
-
-#define B0 0
-#define B1 1
-#define B2 3
-
-static const uint8_t VGA_TO_BW_LUT_e[256] =
-{
-	B0, B0, B0, B1, B2, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B2, B2, B2, B1, B1, B1, B1, B1, B1, B1, B1,
-	B1, B1, B1, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2,
-	B2, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1,
-	B1, B1, B1, B1, B1, B1, B0, B0, B1, B1, B1, B1, B1, B1, B0, B0,
-	B2, B2, B2, B2, B1, B1, B1, B0, B2, B2, B2, B2, B2, B2, B1, B1,
-	B1, B1, B1, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B1, B1, B1, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B2, B2, B2, B2, B1, B1, B1, B1, B1, B1, B1,
-	B2, B2, B2, B2, B2, B2, B2, B2, B1, B1, B1, B0, B0, B0, B0, B0,
-	B0, B0, B0, B0, B0, B0, B0, B0, B2, B2, B2, B1, B1, B0, B0, B1
-};
-
-#undef B0
-#undef B1
-#undef B2
-
-#define B0 0
-#define B1 2
-#define B2 3
-
-static const uint8_t VGA_TO_BW_LUT_o[256] =
-{
-	B0, B0, B0, B1, B2, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B2, B2, B2, B1, B1, B1, B1, B1, B1, B1, B1,
-	B1, B1, B1, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2,
-	B2, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2, B2,
-	B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B1, B1, B1, B1, B1, B1, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1, B1,
-	B1, B1, B1, B1, B1, B1, B0, B0, B1, B1, B1, B1, B1, B1, B0, B0,
-	B2, B2, B2, B2, B1, B1, B1, B0, B2, B2, B2, B2, B2, B2, B1, B1,
-	B1, B1, B1, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B1, B1, B1, B0, B0, B0, B0, B0, B0, B0, B0, B0,
-	B2, B2, B2, B2, B2, B2, B2, B2, B2, B1, B1, B1, B1, B1, B1, B1,
-	B2, B2, B2, B2, B2, B2, B2, B2, B1, B1, B1, B0, B0, B0, B0, B0,
-	B0, B0, B0, B0, B0, B0, B0, B0, B2, B2, B2, B1, B1, B0, B0, B1
-};
-
-#undef B0
-#undef B1
-#undef B2
-
-#endif
-
-
 #define NO_PALETTE_CHANGE 100
 
 static uint16_t st_needrefresh = 0;
@@ -447,66 +378,6 @@ void I_FinishUpdate(void)
 	{
 		I_UploadNewPalette(newpal);
 		newpal = NO_PALETTE_CHANGE;
-	}
-
-	// status bar
-	if (st_needrefresh)
-	{
-		st_needrefresh--;
-
-		if (st_needrefresh)
-		{
-			uint8_t *src = _s_statusbar;
-			uint8_t *dst = screenpage + statusbartop;
-#if HORIZONTAL_RESOLUTION == HORIZONTAL_RESOLUTION_LO
-			for (uint_fast8_t y = 0; y < ST_HEIGHT; y++) {
-				for (uint_fast8_t x = 0; x < SCREENWIDTH * DW / 8; x++) {
-					uint8_t c =    VGA_TO_BW_LUT[*src++];
-					c = (c << 1) | VGA_TO_BW_LUT[*src++];
-					c = (c << 1) | VGA_TO_BW_LUT[*src++];
-					c = (c << 1) | VGA_TO_BW_LUT[*src++];
-					c = (c << 1) | VGA_TO_BW_LUT[*src++];
-					c = (c << 1) | VGA_TO_BW_LUT[*src++];
-					c = (c << 1) | VGA_TO_BW_LUT[*src++];
-					c = (c << 1) | VGA_TO_BW_LUT[*src++];
-					*dst++ = c;
-				}
-
-				dst += PLANEWIDTH - SCREENWIDTH * DW / 8;
-			}
-#else
-			for (uint_fast8_t y = 0; y < ST_HEIGHT / 2; y++) {
-				for (uint_fast8_t x = 0; x < SCREENWIDTH * DW / 8; x++) {
-					uint8_t c =    VGA_TO_BW_LUT_e[*src++];
-					c = (c << 2) | VGA_TO_BW_LUT_e[*src++];
-					c = (c << 2) | VGA_TO_BW_LUT_e[*src++];
-					c = (c << 2) | VGA_TO_BW_LUT_e[*src++];
-					*dst++ = c;
-				}
-
-				dst += PLANEWIDTH - SCREENWIDTH * DW / 8;
-
-				for (uint_fast8_t x = 0; x < (SCREENWIDTH * DW / 8); x++) {
-					uint8_t c =    VGA_TO_BW_LUT_o[*src++];
-					c = (c << 2) | VGA_TO_BW_LUT_o[*src++];
-					c = (c << 2) | VGA_TO_BW_LUT_o[*src++];
-					c = (c << 2) | VGA_TO_BW_LUT_o[*src++];
-					*dst++ = c;
-				}
-
-				dst += PLANEWIDTH - SCREENWIDTH * DW / 8;
-			}
-#endif
-		}
-		else
-		{
-			WaitBlit();
-
-			custom.bltapt = (uint8_t*)(screenpaget - (uint32_t)screenpage) + statusbartop;
-			custom.bltdpt = screenpage + statusbartop;
-
-			custom.bltsize = (ST_HEIGHT << 6) | ((SCREENWIDTH * DW / 8) / 2);
-		}
 	}
 
 	// page flip
@@ -645,6 +516,7 @@ void R_DrawFuzzColumn(const draw_column_vars_t *dcvars)
 
 void V_DrawRaw(int16_t num, uint16_t offset)
 {
+#if 0
 	const uint8_t *lump = W_TryGetLumpByNum(num);
 
 	if (lump != NULL)
@@ -655,21 +527,25 @@ void V_DrawRaw(int16_t num, uint16_t offset)
 	}
 	else
 		W_ReadLumpByNum(num, &_s_statusbar[offset - (SCREENHEIGHT - ST_HEIGHT) * SCREENWIDTH]);
+#endif
 }
 
 
 void ST_Drawer(void)
 {
+#if 0
 	if (ST_NeedUpdate())
 	{
 		ST_doRefresh();
 		st_needrefresh = 2; //2 screen pages
 	}
+#endif
 }
 
 
 void V_DrawPatchNotScaled(int16_t x, int16_t y, const patch_t *patch)
 {
+#if 0
 	y -= patch->topoffset;
 	x -= patch->leftoffset;
 
@@ -698,6 +574,7 @@ void V_DrawPatchNotScaled(int16_t x, int16_t y, const patch_t *patch)
 			column = (const column_t*)((const byte*)column + column->length + 4);
 		}
 	}
+#endif
 }
 
 

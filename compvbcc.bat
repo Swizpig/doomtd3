@@ -1,7 +1,7 @@
 mkdir amiga_vbcc
 
 rem set CFLAGS=-c99 -O2 -speed -cpu=68020 -DVIEWWINDOWWIDTH=30 -DVIEWWINDOWHEIGHT=64  -DHORIZONTAL_RESOLUTION=HORIZONTAL_RESOLUTION_LO -DVERTICAL_RESOLUTION_DOUBLED -lamiga -lauto
-set CFLAGS=-c99 -O4 -speed -cpu=68020  -dontwarn=51 -DVIEWWINDOWWIDTH=30  -DHORIZONTAL_RESOLUTION=HORIZONTAL_RESOLUTION_LO -lamiga -lauto
+set CFLAGS=-c99 -O4 -speed -cpu=68020  -dontwarn=51 -DVIEWWINDOWWIDTH=30  -DHORIZONTAL_RESOLUTION=HORIZONTAL_RESOLUTION_LO -DVIEWWINDOWHEIGHT=64 -lamiga -lauto
 
 rem -dontwarn 51 disables "non-portable bitfield" warnings
 
@@ -10,7 +10,7 @@ rem -dontwarn 51 disables "non-portable bitfield" warnings
 @set GLOBOBJS=%GLOBOBJS% d_main.c
 @set GLOBOBJS=%GLOBOBJS% g_game.c
 rem @set GLOBOBJS=%GLOBOBJS% i_amiga.c
-@set GLOBOBJS=%GLOBOBJS% i_amiga_chunky.c
+@set GLOBOBJS=%GLOBOBJS% i_amiga_chunky_8_by_y.c
 @set GLOBOBJS=%GLOBOBJS% info.c
 @set GLOBOBJS=%GLOBOBJS% m_random.c
 @set GLOBOBJS=%GLOBOBJS% p_doors.c
